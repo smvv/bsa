@@ -1,0 +1,42 @@
+$def with (dataset, viewport)
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Build order analysis</title>
+    <link rel="icon" type="image/png" href="$base_url/static/favicon.ico"/>
+    <link rel="stylesheet" type="text/css" href="$base_url/static/css/main.css"/>
+    <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Rokkitt"/>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+    <script type="text/javascript" src="$base_url/static/js/main.js"></script>
+    <script type="text/javascript" src="$base_url/static/js/waterfall.js"></script>
+  </head>
+  <body>
+    <h1>Build system analysis for <tt>js/src</tt></h1>
+    <div id="details">
+        <div id="viewport">
+            <p>Displayed timeline from ${viewport['start'] / 1000.0} up to 
+               ${viewport['end'] / 1000.0} seconds.</p>
+            <p>Scale is ${1.0 / viewport['scale']} ms/pixel and duration
+               threshold is ${viewport['threshold'] / 1000.0} seconds.</p>
+        </div>
+        <div id="process"></div>
+    </div>
+    <div id="waterfall">
+      <span class="loading">Enable JavaScript to view the waterfall data.</span>
+    </div>
+    <script type="text/javascript">
+        var viewport = {
+            end: $viewport['end'],
+            start: $viewport['start'],
+            scale: $viewport['scale'],
+            threshold: $viewport['threshold']
+        };
+
+        \$(function(){
+            var waterfall = new Waterfall(viewport, '$data_url/$dataset'),
+                interface = new Interface("#waterfall", waterfall);
+        });
+    </script>
+  </body>
+</html>

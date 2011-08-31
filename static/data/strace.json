@@ -1,0 +1,35 @@
+{
+    "version": 100,
+    "processes": {
+        "0": {
+            "start": 1000,
+            "end": 2500,
+            "type": "make",
+            "syscalls": [
+                {"cmd": "make -Bsj12", "duration": 1400}
+            ]
+        },
+
+        "1": {
+            "start": 1400,
+            "end": 2000,
+            "type": "gcc",
+            "parent": "0",
+            "syscalls": [
+                {"cmd": "gcc -c -o foo.o foo.c", "duration": 600}
+            ]
+        },
+
+        "2": {
+            "start": 2010,
+            "end": 2400,
+            "type": "gcc",
+            "parent": "0",
+            "syscalls": [
+                {"cmd": "gcc -o foo foo.o", "duration": 400}
+            ]
+        },
+        
+        "length": 2
+    }
+}

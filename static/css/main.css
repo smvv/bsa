@@ -1,0 +1,85 @@
+body {
+    color: #333;
+    font: 12px/20px "Liberation Sans",verdana,arial,sans;
+}
+
+#details {
+    background-color: rgba(255, 255, 255, 0.7);
+    border: 2px solid rgba(66, 66, 66, 0.4);
+    left: 10px;
+    position: fixed;
+    right: 10px;
+    top: 46px;
+    z-index: 20;
+}
+
+#details p {
+    display: inline;
+    margin: 0;
+    padding: 0 4px;
+}
+
+#process {
+    border-top: 2px solid rgba(66, 66, 66, 0.4);
+    font-family: monospace;
+    height: 104px;
+    overflow: auto;
+}
+
+#process p {
+    display: block;
+}
+
+#process p + p {
+    border-top: 1px solid #ccc;
+}
+
+#waterfall {
+    background: url(ruler.png);
+    border-left: 1px solid #ccc;
+    clear: both;
+    display: inline-block;
+    position: absolute;
+    top: 186px;
+    z-index: 10;
+}
+
+#waterfall .loading, #waterfall .error {
+    display: block;
+    max-width: 600px;
+    padding: 10px;
+    font-family: monospace;
+}
+
+#waterfall .loading {
+    background: #fff;
+}
+
+#waterfall .error {
+    background: #daa;
+    border: 2px solid #eee;
+}
+
+#waterfall div {
+    background-color: #bbe;
+    clear: both;
+    display: block;
+    height: 4px;
+}
+
+#waterfall div.make {
+    background-color: #ccc;
+}
+
+#waterfall div:hover {
+    cursor: pointer;
+    outline: 1px solid #aaa;
+}
+
+#waterfall div.selected {
+    outline: 1px solid red;
+}
+
+#waterfall div + div {
+    margin-top: 1px;
+}
