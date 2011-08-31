@@ -79,7 +79,7 @@ def render_html(processes):
 
         process_type = parse_process_type(tasks)
 
-        html += '<div id=p%d class=%s' \
+        html += '<div id=p%s class=%s' \
                 ' style="margin-left:%dpx;width:%dpx;"></div>\n' \
                 % (pid, process_type, left, width)
 
