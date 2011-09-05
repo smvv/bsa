@@ -1,10 +1,10 @@
 #!/bin/sh
 
-syscalls="exit_group|vfork|execve|wait4"
-syscalls="$syscalls|<\.\.\. ($syscalls)"
-
-echo "Starting strace and grep for $syscalls."
-
+#syscalls="exit_group|vfork|execve|wait4"
+#syscalls="$syscalls|<\.\.\. ($syscalls)"
+#
+#echo "Starting strace and grep for $syscalls."
+#
 # Redirect only stderr to a pipe.
 #exec 3>&1
 #strace -ftts 1024 -e trace=process make -sj12 $@ 2>&1 >&3 3>&- | \
