@@ -11,12 +11,7 @@ For Make, strace is used to get all required information (start time, end time,
 arguments) about the invoked sub processes. A filtered strace log file of Make
 is required to construct the build order diagram:
 
-  syscalls="exit_group|vfork|execve|wait4"
-  syscalls="$syscalls|<\.\.\. ($syscalls)"
-  strace -ftts 1024 make -Bsj12 2>&1 | \
-      egrep "^(\[pid +[0-9]+\] )?[0-9:.]{15} ($syscalls)|^(\)|Process)" \
-      > strace.log
-
+  strace -ftts 1024 -e trace=process make -sj12 $@ &> strace.log
   ./convert.py --format=strace -o static/data/bsa.json strace.log
 
 Usage instructions for PyMake
