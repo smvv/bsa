@@ -7,7 +7,7 @@ processes, strace is used.
 To use this utility, a filtered strace log file of Make is required:
 
   strace -ftts 1024 make -Bsj12 2>&1|egrep exit_group\|vfork\|execve > make.log
-  cat make.log | ./build_order.py
+  cat make.log | ./build_order.py > static/data/strace.json
 
 """
 
@@ -17,7 +17,7 @@ To use this utility, a filtered strace log file of Make is required:
 import simplejson as json
 
 
-class Process(object):
+class Syscall(object):
     def __init__(self, start_time, cmd):
         self.cmd = cmd
         self.duration = 0
@@ -28,19 +28,19 @@ class Process(object):
         return self.__str__()
 
     def __str__(self):
-        return '<Process duration=%d cmd=%s>' % (self.duration, self.cmd)
+        return '<Syscall duration=%d cmd=%s>' % (self.duration, self.cmd)
 
     def to_dict(self):
         return {'cmd': self.cmd, 'duration': self.duration,
                 'start': self.start, 'end': self.end}
 
 
-class JSONProcessEncoder(json.JSONEncoder):
+class JSONSyscallEncoder(json.JSONEncoder):
 
-    def default(self, process):
-        if isinstance(process, Process):
-            return process.to_dict()
-        return json.JSONEncoder.default(self, process)
+    def default(self, syscall):
+        if isinstance(syscall, Syscall):
+            return syscall.to_dict()
+        return json.JSONEncoder.default(self, syscall)
 
 def ptime(x):
     """
@@ -53,17 +53,17 @@ def ptime(x):
     return (micro / 1000) + 1000 * (s + 60 * (m + 60 * h))
 
 
-def parse_strace_output(fd):
+def parse_strace_output(fd, duration_threshold):
     """
     The first line of the given file descriptor should contain the absolute start
     time (format in ``%H:%M:%S.%f``) of the master Make process, followed by a
-    space and the complete ``execve`` function call.
+    space and the complete ``execve`` system call.
     """
     zero_line = fd.readline().split(None, 1)
     zero_time = ptime(zero_line[0])
-    zero_process = Process(0, zero_line[1].strip())
+    origin = Syscall(0, zero_line[1].strip())
 
-    processes = {0: [zero_process]}
+    syscalls = {0: [origin]}
 
     for line in fd:
         if line.startswith('['):
@@ -80,47 +80,69 @@ def parse_strace_output(fd):
             continue
 
         cur_time = ptime(time_string) - zero_time
-        #print '%d | %s | %s' %  (pid, cur_time, cmd)
 
-        # Execute a command in the current process (save its start time).
+        # Execute a syscall in the current process (save its start time).
         if cmd.startswith('execve') or cmd.startswith('<... execve resumed>'):
-            process = Process(cur_time, cmd)
-            if pid not in processes:
-                processes[pid] = []
-            processes[pid].append(process)
-        # A command is finished, calculate its duration (using end time).
+            syscall = Syscall(cur_time, cmd)
+            if pid not in syscalls:
+                syscalls[pid] = []
+            syscalls[pid].append(syscall)
+        # A syscall is finished, calculate its duration (using end time).
         elif cmd.startswith('exit_group'):
-            process = processes[pid][-1]
-            assert process.duration == 0
-            process.end = cur_time
-            process.duration = cur_time - process.start
+            syscall = syscalls[pid][-1]
+            assert syscall.duration == 0
+            syscall.end = cur_time
+            syscall.duration = cur_time - syscall.start
+
+    processes = {}
+
+    for pid, calls in syscalls.iteritems():
+        type = parse_syscall_type(calls)
+        parent = 0
+        start = calls[0].start
+        end = calls[-1].end
+        duration = end - start
+
+        if duration < duration_threshold:
+            continue
+
+        processes[pid] = {'type': type, 'parent': parent, 'syscalls': calls,
+                'start': start, 'end': end, 'duration': duration}
+
+    processes['length'] = len(processes)
 
     return processes
 
 
-def parse_process_type(tasks):
+def parse_syscall_type(syscalls):
     pos = 1
-    task = tasks[-pos]
-    task_count = len(tasks)
+    syscall = syscalls[-pos]
+    syscall_count = len(syscalls)
 
-    while pos < task_count and task.cmd.startswith('<... execve resumed>'):
+    while pos < syscall_count \
+            and syscall.cmd.startswith('<... execve resumed>'):
         pos += 1
-        task = tasks[-pos]
+        syscall = syscalls[-pos]
 
-    if '/usr/bin/make' in task.cmd:
-        process_type ='make'
+    if '/usr/bin/make' in syscall.cmd:
+        syscall_type ='make'
     else:
-        process_type = 'unknown'
+        syscall_type = 'unknown'
 
-    return process_type
+    return syscall_type
+
+
+def dump_json(processes):
+    json = JSONSyscallEncoder().encode({'version': 100, 'processes': processes})
+    print json
 
 
 if __name__ == '__main__':
     import sys
-    processes = parse_strace_output(sys.stdin)
+    duration_threshold = 0.1 * 1000
+    processes = parse_strace_output(sys.stdin, duration_threshold)
+    dump_json(processes)
 
-    render_html(processes)
-
-    #for pid, tasks in processes.iteritems():
+    #for pid, tasks in syscalls.iteritems():
     #    if pid == 0:
     #        continue

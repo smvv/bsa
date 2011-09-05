@@ -67,19 +67,35 @@ body {
     height: 4px;
 }
 
-#waterfall div.make {
-    background-color: #ccc;
-}
-
 #waterfall div:hover {
     cursor: pointer;
-    outline: 1px solid #aaa;
+    outline: 1px solid #999;
 }
 
 #waterfall div.selected {
-    outline: 1px solid red;
+    outline: 1px solid #777;
 }
 
 #waterfall div + div {
     margin-top: 1px;
+}
+
+/*
+ * Process color scheme
+ */
+
+#waterfall div.make {
+    background-color: #ccc;
+}
+
+#waterfall div.sh {
+    background-color: #c99;
+}
+
+#waterfall div.cpp {
+    background-color: #99c;
+}
+
+#waterfall div.cpp {
+    background-color: #9c9;
 }

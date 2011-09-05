@@ -14,11 +14,11 @@ $def with (dataset, viewport)
   <body>
     <h1>Build system analysis for <tt>js/src</tt></h1>
     <div id="details">
-        <div id="viewport">
+        <div id="properties">
             <p>Displayed timeline from ${viewport['start'] / 1000.0} up to 
                ${viewport['end'] / 1000.0} seconds.</p>
             <p>Scale is ${1.0 / viewport['scale']} ms/pixel and duration
-               threshold is ${viewport['threshold'] / 1000.0} seconds.</p>
+               threshold is $viewport['threshold'] seconds.</p>
         </div>
         <div id="process"></div>
     </div>

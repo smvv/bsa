@@ -1,10 +1,14 @@
-base_url = ''  # http://doma.in/foo/
-               #               ^^^^ = base url (no trailing slash)
+# http://doma.in/foo/
+#               ^^^^ = base url (no trailing slash)
+base_url = '/bsa'
+
+# Used for internal rerouting (lighttpd, apache).
+proxy_url = '/viewer.py'
 
 # web directory where processed strace/pymake output is written to.
-data_url = '/static/data'  
+data_url = base_url +  '/static/data'  
 
-default_dataset = 'strace.json'
+default_dataset = 'bsa.json'
 
 default_viewport = {
         # inclusive end of viewport, in milliseconds.
@@ -16,6 +20,6 @@ default_viewport = {
         # scale of the viewport, in milliseconds per pixel.
         'scale': 1.0 / 20,
 
-        # minimal duration to show it, in milliseconds.
-        'threshold': 100,
+        # minimal duration to show the process in the viewer, in seconds.
+        'threshold': 0.1,
     }

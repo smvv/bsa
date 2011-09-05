@@ -34,7 +34,7 @@ $.extend(Waterfall.prototype, {
         this.data = data;
         this.parse_data(data);
 
-        //$('#waterfall div#p0').click();
+        $('#waterfall div:first-child').click();
     },
 
     parse_data: function(data) {
@@ -42,26 +42,34 @@ $.extend(Waterfall.prototype, {
 
         this.process_syscalls = {};
 
-        for( pid in data.processes ) {
-            if (pid == 'length')
-                continue;
-
+        for( t in data.timeline ) {
+            pid = data.timeline[t].toString();
             this.process_syscalls[pid] = data.processes[pid].syscalls;
             html += this.construct_bar(pid, data.processes[pid]);
         }
 
         $('#waterfall').html(html);
+
+        html = this.construct_properties(data.properties);
+        $('#properties').html(html);
     },
 
     construct_bar: function(pid, process) {
         var left = (process.start - this.viewport.start) * this.viewport.scale,
             width = (process.end - process.start) * this.viewport.scale;
 
-        left = Math.round(left);
-        width = Math.round(width);
+        left = Math.ceil(left);
+        width = Math.ceil(width);
 
         return '<div id=p' + pid + ' class=' + process.type
                + ' style="margin-left:' + left + 'px;width:' + width + 'px;">'
                + '</div>';
+    },
+
+    construct_properties: function(properties) {
+        return '<p>Displayed timeline from ' + (this.viewport.start / 1000.0)
+               + ' up to ' + (this.viewport.end / 1000.0) + ' seconds. Scale'
+               + ' is ' + (1.0/this.viewport.scale) + ' ms/pixel and duration'
+               + ' threshold is ' + properties.threshold + ' seconds.</p>';
     }
 });
