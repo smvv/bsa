@@ -18,7 +18,7 @@ default_viewport = {
         'start': 0,
 
         # scale of the viewport, in milliseconds per pixel.
-        'scale': 1.0 / 20,
+        'scale': 1.0 / 10,
 
         # minimal duration to show the process in the viewer, in seconds.
         'threshold': 0.1,

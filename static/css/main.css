@@ -61,10 +61,9 @@ body {
 }
 
 #waterfall div {
-    background-color: #bbe;
+    border-top: 4px solid #bbe;
     clear: both;
     display: block;
-    height: 4px;
 }
 
 #waterfall div:hover {
@@ -76,8 +75,24 @@ body {
     outline: 1px solid #777;
 }
 
+#waterfall div div {
+    margin-top: 1px;
+}
+
 #waterfall div + div {
     margin-top: 1px;
+}
+
+#waterfall div div div {
+    display: none;
+}
+
+#waterfall div div.expanded div {
+    display: block;
+}
+
+#waterfall div div.expanded {
+    outline: 1px solid #99c;
 }
 
 /*
@@ -85,17 +100,17 @@ body {
  */
 
 #waterfall div.make {
-    background-color: #ccc;
+    border-color: #ccc;
 }
 
 #waterfall div.sh {
-    background-color: #c99;
+    border-color: #c99;
 }
 
 #waterfall div.cpp {
-    background-color: #99c;
+    border-color: #99c;
 }
 
 #waterfall div.cpp {
-    background-color: #9c9;
+    border-color: #9c9;
 }

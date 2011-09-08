@@ -34,7 +34,7 @@ $.extend(Waterfall.prototype, {
         this.data = data;
         this.parse_data(data);
 
-        $('#waterfall div:first-child').click();
+        $('#waterfall div:first').click();
     },
 
     parse_data: function(data) {
@@ -42,28 +42,56 @@ $.extend(Waterfall.prototype, {
 
         this.process_syscalls = {};
 
-        for( t in data.timeline ) {
-            pid = data.timeline[t].toString();
-            this.process_syscalls[pid] = data.processes[pid].syscalls;
-            html += this.construct_bar(pid, data.processes[pid]);
-        }
-
+        pid = data.processes.root.toString();
+        html = this.parse_process(data, pid);
         $('#waterfall').html(html);
 
         html = this.construct_properties(data.properties);
         $('#properties').html(html);
     },
 
-    construct_bar: function(pid, process) {
-        var left = (process.start - this.viewport.start) * this.viewport.scale,
+    parse_process: function(data, pid) {
+        var html = '';
+
+        if( pid in data.processes ) {
+            var process = data.processes[pid];
+            this.process_syscalls[pid] = process.syscalls;
+        
+            if( process.duration < data.properties.threshold * 1000 )
+                return html;
+
+            html = this.construct_bar(data, pid);
+        }
+        else if(console && console.log) {
+            console.log('process #' + pid + ' not in data.processes.');
+        }
+    
+        return html;
+    },
+
+    construct_bar: function(data, pid) {
+        // TODO: currently the parent's left and width are calculated for each
+        // child, which is rather inefficient. Try to cache the calculations.
+        var process = data.processes[pid],
+            left = (process.start - this.viewport.start) * this.viewport.scale,
             width = (process.end - process.start) * this.viewport.scale;
+
+        if( process.parent ) {
+            var parent = data.processes[process.parent.toString()];
+            left -= (parent.start - this.viewport.start) * this.viewport.scale;
+        }
 
         left = Math.ceil(left);
         width = Math.ceil(width);
 
-        return '<div id=p' + pid + ' class=' + process.type
-               + ' style="margin-left:' + left + 'px;width:' + width + 'px;">'
-               + '</div>';
+        html = '<div id=p' + pid + ' class=' + process.type
+               + ' style="margin-left:' + left + 'px;width:' + width + 'px;">';
+
+        for(var c = 0; c < process.children.length; c++) {
+            html += this.parse_process(data, process.children[c.toString()]);
+        }
+
+        return html + '</div>';
     },
 
     construct_properties: function(properties) {

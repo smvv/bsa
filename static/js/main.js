@@ -11,8 +11,14 @@ $.extend(Interface.prototype, {
 
     dispatch_event: function(evt) {
         // Only dispatch events for processes.
-        if( evt.target.id && evt.target.id[0] == 'p' )
+        if( evt.target.id && evt.target.id[0] == 'p' ) {
             evt.currentTarget.interface.load_syscalls(evt.target.id.substr(1));
+            evt.currentTarget.interface.expand_or_collapse(evt.target.id.substr(1));
+        }
+    },
+
+    expand_or_collapse: function(pid) {
+        $('#p' + pid).toggleClass('expanded');
     },
 
     load_syscalls: function(pid){

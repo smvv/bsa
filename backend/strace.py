@@ -29,12 +29,11 @@ class Syscall(object):
         return self.__str__()
 
     def __str__(self):
-        return '<Syscall duration=%d cmd=%s>' % (self.duration, self.cmd)
+        return str(self.to_dict())
 
     def to_dict(self):
         return {'cmd': self.cmd, 'duration': self.duration,
-                'start': self.start, 'end': self.end, 
-                'children': self.children}
+                'start': self.start, 'end': self.end}
 
 
 class JSONSyscallEncoder(json.JSONEncoder):
@@ -62,35 +61,21 @@ def parse_strace_output(fd, duration_threshold):
     structure. The timeline is a list of pids, sorted by start time of the
     process.
 
-    The first line of the given file descriptor should contain the absolute
-    start time (format in ``%H:%M:%S.%f``) of the master Make process, followed
-    by a space and the complete ``execve`` system call.
+    The lines of the given file descriptor should contain the process id, a
+    space, the absolute start time (format in ``%H:%M:%S.%f``) of the event,
+    followed by a space and the complete ``execve`` system call.
     """
-    zero_line = fd.readline().split(None, 1)
-    zero_time = ptime(zero_line[0])
-    zero_pid = 0
-    origin = Syscall(zero_pid, zero_line[1].strip())
-
     # Convert threshold in seconds to milliseconds.
     duration_threshold = duration_threshold * 1000
 
-    syscalls = {zero_pid: [origin]}
+    syscalls = {}
+    parents = {}
+    zero_time = 0
+    zero_pid = 0
 
     for line in fd:
-        if line.startswith('['):
-            pid, time_string, cmd = line.split(None, 3)[1:]
-            pid = int(pid[:-1])
-        elif line.startswith('Process '):
-            # exit_group system calls are followed by a Process status line.
-            continue
-        elif line.startswith(') '):
-            # vfork system calls are followed by a line starting with a closing
-            # parentheis, followed by an equal sign and the syscall's exit code.
-            continue
-        else:
-            pid = zero_pid
-            time_string, cmd = line.split(None, 1)
-
+        pid, time_string, cmd = line.split(None, 2)
+        pid = int(pid)
         cmd = cmd.strip()
 
         try:
@@ -98,6 +83,14 @@ def parse_strace_output(fd, duration_threshold):
         except ValueError:
             print 'line = ', line
             raise
+        
+        # First line is the master Make process, which defines the zero time.
+        if zero_time == 0:
+            zero_time = cur_time
+            zero_pid = pid
+            syscall = Syscall(0, cmd)
+            syscalls[pid] = [syscall]
+            continue
 
         # Execute a syscall in the current process (save its start time).
         if cmd.startswith('execve') or cmd.startswith('<... execve resumed>'):
@@ -111,40 +104,59 @@ def parse_strace_output(fd, duration_threshold):
             assert syscall.duration == 0
             syscall.end = cur_time
             syscall.duration = cur_time - syscall.start
-        elif cmd.startswith('vfork') or cmd.startswith('<... vfork resumed>'):
+        elif cmd.startswith('vfork') or cmd.startswith('<... vfork resumed>') \
+                or cmd.startswith('clone') \
+                or cmd.startswith('<... clone resumed>'):
+            
             # Make sure the vfork call is not unfinished.
-            pos = cmd.find(') = ')
-            if pos > -1:
-                print cmd
-                child_pid = cmd[pos+4:]
-                syscalls[pid][-1].children.append(child_pid)
+            if '<unfinished ...>' in cmd:
+                continue
+        
+            # FIXME: what to do with these ERESTARTNOINTR kernel signals?
+            if ' ERESTARTNOINTR ' in cmd:
+                continue
 
-
+            pos = cmd.find(' = ')
+            assert pos > -1
+            child_pid = int(cmd[pos+3:])
+            parents[child_pid] = pid
+            syscalls[pid][-1].children.append(child_pid)
 
     processes = {}
-    timeline = []
 
     for pid, calls in syscalls.iteritems():
-        type = parse_syscall_type(calls)
-        parent = 0
+        process_type = parse_syscall_type(calls)
+
+        if pid == zero_pid:
+            parent = 0
+        else:
+            parent = parents[pid]
+
         start = calls[0].start
         end = calls[-1].end
         duration = end - start
 
-        if duration < duration_threshold:
-            continue
+        try:
+            assert not any(c.children for c in calls[:-1])
+            assert parent > 0 or pid == zero_pid
+            assert start > 0 or pid == zero_pid
+            assert end > 0
+            assert duration > 0
+        except AssertionError:
+            print pid, len(calls)
+            print calls
+            raise
 
-        timeline.append((pid, calls[0].start))
-        processes[pid] = {'type': type, 'parent': parent, 'syscalls': calls,
-                'start': start, 'end': end, 'duration': duration}
+        #if duration < duration_threshold:
+        #   continue
 
-    processes['length'] = len(processes)
+        processes[pid] = {'type': process_type, 'parent': parent, 
+                'syscalls': calls, 'start': start, 'end': end, 
+                'duration': duration, 'children': calls[-1].children}
 
-    # Sort processes by start time.
-    sorted(timeline, key=lambda x: x[1])
-    timeline = map(lambda x: x[0], timeline)
+    processes['root'] = zero_pid
 
-    return processes, timeline
+    return processes
 
 
 def parse_syscall_type(syscalls):
@@ -158,6 +170,7 @@ def parse_syscall_type(syscalls):
         syscall = syscalls[-pos]
 
     pos = syscall.cmd.find('", [')
+
     if pos > -1:
         cmd = syscall.cmd[8: pos]  # 8 = 'execve("'
     else:
@@ -177,14 +190,13 @@ def parse_syscall_type(syscalls):
     return syscall_type
 
 
-def dump_json(fd, processes, timeline, properties):
-    obj = {'version': 100, 'processes': processes, 'timeline': timeline,
-           'properties': properties}
+def dump_json(fd, processes, properties):
+    obj = {'version': 100, 'processes': processes, 'properties': properties}
     json = JSONSyscallEncoder().encode(obj)
     print >>fd, json
 
 
 def main(args):
     properties = {'threshold': args.threshold}
-    processes, timeline = parse_strace_output(args.input, args.threshold)
-    dump_json(args.output, processes, timeline, properties)
+    processes = parse_strace_output(args.input, args.threshold)
+    dump_json(args.output, processes, properties)
