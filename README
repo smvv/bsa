@@ -1,0 +1,8 @@
+Build system analysis for Make and PyMake
+=========================================
+
+Build system analysis allows developers to construct a build order diagram
+(waterfall graph) from a (Py)Make build system.
+
+For documentation, see http://smvv.kompiler.org/bsa/docs/.
+
